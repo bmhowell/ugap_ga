@@ -1,8 +1,8 @@
-// Description: main file for ugap_simulation
-//              reaction diffusion simulation of 
+// Description: main file for ugap_ga
+//              optimization of material & process parameters
 //              urethane grafted acrylate polymer (UGAP)
-// polymer resins with custom additive particles for 3D printing.
-// Created by Brian Howell on 02/24/23
+//              using genetic algorithm (GA)
+// Created by Brian Howell on 10/31/23
 // MSOL UC Berkeley
 // bhowell@berkeley.edu
 #include <iostream>
@@ -29,13 +29,13 @@ int main() {
     default_sim.time_stepping = 0;
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
-    int   save_voxel = 1;
+    int   save_voxel = 0;
     
     // GA parameters
-    int pop = 24;                                                   // population size
-    int P   = 6;                                                    // number of parents
-    int C   = 6;                                                    // number of children
-    int G   = 100;                                                 // number of generations
+    int pop = omp_get_num_procs();                                  // population size
+    int P   = 4;                                                    // number of parents
+    int C   = 4;                                                    // number of children
+    int G   = 10;                                                   // number of generations
     double lam_1, lam_2;                                            // genetic alg paramters
 
     // || temp | rm | vp | uvi | uvt | obj || ∈ ℝ (pop x param + obj)
@@ -58,13 +58,78 @@ int main() {
     // performance vectors
     std::vector<double> top_performer; 
     std::vector<double> avg_parent; 
-    std::vector<double> avg_total; 
+    std::vector<double> avg_total;
+
+    // initialize top performers
+    #pragma omp parallel for
+    for (int p = 0; p < pop; ++p) {
+        Voxel sim(default_sim.tfinal,    // tot sim time
+                  default_sim.dt,        // time step
+                  default_sim.node,      // num nodes
+                  default_sim.method,    // sim id
+                  param(p, 0),           // amb temp
+                  param(p, 3),           // uv intensity
+                  param(p, 4),           // uv exposure time
+                  default_sim.method,    // time stepping scheme
+                  save_voxel,            // save voxel values
+                  file_path,
+                  mthread);
+        sim.computeParticles(param(p, 1), param(p, 2));
+        sim.simulate();
+        #pragma omp critical
+            {
+                int thread_id = omp_get_thread_num();
+                // std::cout << "Thread " << thread_id << std::endl;
+                if (!std::isnan(sim.getObjective())) {
+                    param(p, 5) = sim.getObjective();
+                } else {
+                    param(p, 5) = 1000.;
+                }
+            }
+    }
+
+    sort_data(param);
+
+    // track top and average performers
+    top_performer.push_back(param(0, param.cols() - 1));
+    avg_parent.push_back(param.col(param.cols() - 1).head(P).mean());
+    avg_total.push_back(param.col(param.cols() - 1).mean());
     
+
+    std::cout << "\nparam: \n" << param << std::endl;
+
+    // mate top performing samples
+    for (int i = 0; i < P; i+=2) {
+        // generate random numbers
+        lam_1 = distribution(gen);
+        lam_2 = distribution(gen);
+
+        // skip parent rows and update child rows
+        param.row(i + C)     = lam_1 * param.row(i) + (1-lam_1) * param.row(i+1);
+        param.row(i + C + 1) = lam_2 * param.row(i) + (1-lam_2) * param.row(i+1);
+        
+        // reset obj
+        param(i+C,   param.cols()-1) = 1000.0;
+        param(i+C+1, param.cols()-1) = 1000.0;
+    }
+
+    // generate new pop for remaining rows
+    for (int i = P + C; i < pop; ++i) {
+        param(i, 0) = c.min_temp + (c.max_temp - c.min_temp) * distribution(gen);
+        param(i, 1) = c.min_rp   + (c.max_rp   - c.min_rp)   * distribution(gen);
+        param(i, 2) = c.min_vp   + (c.max_vp   - c.min_vp)   * distribution(gen);
+        param(i, 3) = c.min_uvi  + (c.max_uvi  - c.min_uvi)  * distribution(gen);
+        param(i, 4) = c.min_uvt  + (c.max_uvt  - c.min_uvt)  * distribution(gen); 
+        param(i, 5) = 1000.0;
+    }
+
+    std::cout << "==== BEGIN GENERATIONS ====" << std::endl;
     // loop over generations
-    for (int g = 0; g < 5; ++g) {
+    for (int g = 0; g < G; ++g) {
         // loop over population 
+        std::cout << "---- PARALLEZING POP " << g << " ----" << std::endl;
         #pragma omp parallel for
-        for (int p = 0; p < pop; ++p) {
+        for (int p = P; p < pop; ++p) {
             // initialize simulation
             Voxel sim(default_sim.tfinal,    // tot sim time
                       default_sim.dt,        // time step
@@ -83,14 +148,13 @@ int main() {
             #pragma omp critical
             {
                 int thread_id = omp_get_thread_num();
-                std::cout << "Thread " << thread_id << std::endl;
+                // std::cout << "Thread " << thread_id << std::endl;
                 if (!std::isnan(sim.getObjective())) {
                     param(p, 5) = sim.getObjective();
                 } else {
                     param(p, 5) = 1000.;
                 }
             }
-            std::cout << std::endl;
         }
 
         sort_data(param);
@@ -136,43 +200,42 @@ int main() {
         }
         std::cout << std::endl;
 
-        std::cout << "\naavg_parent: " << std::endl;
+        std::cout << "\navg_parent: " << std::endl;
         for (int i = 0; i < avg_parent.size(); ++i) {
             std::cout << avg_parent[i] << ", ";
         }
         std::cout << std::endl;
 
-        std::cout << "\avg_total: " << std::endl;
+        std::cout << "\navg_total: " << std::endl;
         for (int i = 0; i < avg_total.size(); ++i) {
             std::cout << avg_total[i] << ", ";
         }
         std::cout << std::endl;
-
-
-
-
     }
 
+    // save performance vector to file
+    std::ofstream top_performer_file;
+    top_performer_file.open(file_path + "top_performer.txt");
+    top_performer_file << "top_performer, avg_parent, avg_total" << std::endl;
+    for (int i = 0; i < top_performer.size(); ++i) {
+        top_performer_file << top_performer[i] << ", " << avg_parent[i] << ", " << avg_total[i] << std::endl;
+    }
+    top_performer_file.close();
+
+    // save param matrix to file
+    std::ofstream param_file;
+    param_file.open(file_path + "param.txt");
+    param_file << "temp, rp, vp, uvi, uvt, obj" << std::endl;
+    param_file << param << std::endl;
+    // for (int i = 0; i < param.rows(); ++i) {
+    //     for (int j = 0; j < param.cols(); ++j) {
+    //         param_file << param(i, j) << ", ";
+    //     }
+    //     param_file << std::endl;
+    // }
+    param_file.close();
 
 
-    // std::cout << "===== RUNNING GA =====" << std::endl;
-
-    // Voxel VoxelSystem1(default_sim.tfinal,  // tot sim time
-    //                    default_sim.dt,      // time step
-    //                    default_sim.node,    // num nodes
-    //                    default_sim.method,  // sim id
-    //                    default_bopt.temp,   // amb temp
-    //                    default_bopt.uvi,    // uv intensity
-    //                    default_bopt.uvt,    // uv exposure time
-    //                    default_sim.method,  // time stepping scheme
-    //                    save_voxel,          // save voxel values 
-    //                    file_path,
-    //                    mthread);
-    // VoxelSystem1.computeParticles(default_bopt.rp, default_bopt.vp);
-    // // VoxelSystem1.density2File();
-    // VoxelSystem1.simulate();
-    // double default_objective = VoxelSystem1.getObjective();
-    // std::cout << "default_objective: " << default_objective << std::endl;
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = (std::chrono::duration_cast<std::chrono::microseconds>(stop - start)).count() / 1e6;
 
