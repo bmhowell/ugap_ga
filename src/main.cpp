@@ -11,7 +11,6 @@
 void sort_data(Eigen::MatrixXd& PARAM);
 
 int main() {
-    std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output/";
     auto start = std::chrono::high_resolution_clock::now();
 
     // opt constraints
@@ -26,10 +25,12 @@ int main() {
     default_bopt.uvt  = 30.;
     
     sim default_sim;
-    default_sim.time_stepping = 0;
+    default_sim.time_stepping = 2;
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
     int   save_voxel = 0;
+    std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
+                            + std::to_string(default_sim.time_stepping);
     
     // GA parameters
     int pop = omp_get_num_procs();                                  // population size
@@ -47,6 +48,7 @@ int main() {
     std::uniform_real_distribution<double> distribution(0.0, 1.0);  // Define the range [0.0, 1.0)
 
     // initials input samples
+    std::cout << "--- INITIALIZING FIRST RUN ----" << std::endl;
     for (int i = 0; i < param.rows(); ++i){
         param(i, 0) = c.min_temp + (c.max_temp - c.min_temp) * distribution(gen);
         param(i, 1) = c.min_rp   + (c.max_rp   - c.min_rp)   * distribution(gen);
@@ -215,7 +217,7 @@ int main() {
 
     // save performance vector to file
     std::ofstream top_performer_file;
-    top_performer_file.open(file_path + "top_performer.txt");
+    top_performer_file.open(file_path + "/top_performer.txt");
     top_performer_file << "top_performer, avg_parent, avg_total" << std::endl;
     for (int i = 0; i < top_performer.size(); ++i) {
         top_performer_file << top_performer[i] << ", " << avg_parent[i] << ", " << avg_total[i] << std::endl;
@@ -224,20 +226,19 @@ int main() {
 
     // save param matrix to file
     std::ofstream param_file;
-    param_file.open(file_path + "param.txt");
+    param_file.open(file_path + "/param.txt");
     param_file << "temp, rp, vp, uvi, uvt, obj" << std::endl;
     param_file << param << std::endl;
-    // for (int i = 0; i < param.rows(); ++i) {
-    //     for (int j = 0; j < param.cols(); ++j) {
-    //         param_file << param(i, j) << ", ";
-    //     }
-    //     param_file << std::endl;
-    // }
     param_file.close();
 
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = (std::chrono::duration_cast<std::chrono::microseconds>(stop - start)).count() / 1e6;
+    
+    std::ofstream time_file; 
+    time_file.open(file_path + "/time_info.txt");
+    time_file << " --- Simulation time: " << duration / 60 << "min ---";
+    time_file.close();
 
     std::cout << " --- Simulation time: " << duration / 60 << "min ---" << std::endl;
     std::cout << " --- ----------------------------- ---" << std::endl;
