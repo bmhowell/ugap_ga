@@ -25,7 +25,7 @@ int main() {
     default_bopt.uvt  = 30.;
     
     sim default_sim;
-    default_sim.time_stepping = 2;
+    default_sim.time_stepping = 0;
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
     int   save_voxel = 0;
@@ -61,6 +61,7 @@ int main() {
     std::vector<double> top_performer; 
     std::vector<double> avg_parent; 
     std::vector<double> avg_total;
+    std::vector<double> top_temp, top_rp, top_vp, top_uvi, top_uvt;
 
     // initialize top performers
     #pragma omp parallel for
@@ -96,7 +97,11 @@ int main() {
     top_performer.push_back(param(0, param.cols() - 1));
     avg_parent.push_back(param.col(param.cols() - 1).head(P).mean());
     avg_total.push_back(param.col(param.cols() - 1).mean());
-    
+    top_temp.push_back(param(0, 0));
+    top_rp.push_back(param(0, 1));
+    top_vp.push_back(param(0, 2));
+    top_uvi.push_back(param(0, 3));
+    top_uvt.push_back(param(0, 4));
 
     std::cout << "\nparam: \n" << param << std::endl;
 
@@ -165,6 +170,11 @@ int main() {
         top_performer.push_back(param(0, param.cols() - 1));
         avg_parent.push_back(param.col(param.cols() - 1).head(P).mean());
         avg_total.push_back(param.col(param.cols() - 1).mean());
+        top_temp.push_back(param(0, 0));
+        top_rp.push_back(param(0, 1));
+        top_vp.push_back(param(0, 2));
+        top_uvi.push_back(param(0, 3));
+        top_uvt.push_back(param(0, 4));
 
         std::cout << "\nparam: \n" << param << std::endl;
         // update input samples
@@ -226,10 +236,25 @@ int main() {
 
     // save param matrix to file
     std::ofstream param_file;
-    param_file.open(file_path + "/param.txt");
+    param_file.open(file_path + "/final_param.txt");
     param_file << "temp, rp, vp, uvi, uvt, obj" << std::endl;
     param_file << param << std::endl;
     param_file.close();
+
+    std::ofstream param_converge_file;
+    param_converge_file.open(file_path + "/param_converge.txt");
+    param_converge_file << "temp, rp, vp, uvi, uvt, avg_obj, avg_top_obj, top_obj" << std::endl;
+    for (int i = 0; i < top_temp.size(); ++i) {
+        param_converge_file << top_temp[i]      << ", " 
+                            << top_rp[i]        << ", " 
+                            << top_vp[i]        << ", " 
+                            << top_uvi[i]       << ", "  
+                            << top_uvt[i]       << ", " 
+                            << avg_total[i]     << ", " 
+                            << avg_parent[i]    << ", " 
+                            << top_performer[i] << std::endl;
+    }
+    param_converge_file.close();
 
 
     auto stop = std::chrono::high_resolution_clock::now();

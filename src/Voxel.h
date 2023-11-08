@@ -5,7 +5,6 @@
 #ifndef UGAPDIFFUSION_VOXEL_H
 #define UGAPDIFFUSION_VOXEL_H
 #include "common.h"
-#include "Optimizable.h"
 
 class Voxel {
 
