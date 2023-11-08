@@ -29,8 +29,11 @@ int main() {
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
     int   save_voxel = 0;
-    std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
-                            + std::to_string(default_sim.time_stepping);
+    // std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
+    //                         + std::to_string(default_sim.time_stepping);
+    
+    std::string file_path = "/home/brian/Documents/brian/ugap_ga/output_"
+	                    + std::to_string(default_sim.time_stepping); 
     
     // GA parameters
     int pop = omp_get_num_procs();                                  // population size
