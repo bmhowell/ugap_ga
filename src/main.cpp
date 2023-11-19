@@ -12,6 +12,8 @@ void sort_data(Eigen::MatrixXd& PARAM);
 
 int main() {
     auto start = std::chrono::high_resolution_clock::now();
+    double pareto_weights[4]  = {3.56574286e-09, 2.42560512e-03, 2.80839829e-01, 7.14916061e-01};
+    int obj_fn = 5;
 
     // opt constraints
     constraints c; 
@@ -72,16 +74,18 @@ int main() {
         Voxel sim(default_sim.tfinal,    // tot sim time
                   default_sim.dt,        // time step
                   default_sim.node,      // num nodes
-                  default_sim.method,    // sim id
+                  default_sim.time_stepping,    // sim id
                   param(p, 0),           // amb temp
                   param(p, 3),           // uv intensity
                   param(p, 4),           // uv exposure time
-                  default_sim.method,    // time stepping scheme
-                  save_voxel,            // save voxel values
                   file_path,
                   mthread);
         sim.computeParticles(param(p, 1), param(p, 2));
-        sim.simulate();
+        sim.simulate(default_sim.method,    // time stepping scheme
+                    save_voxel,             // save voxel values
+                    obj_fn,                 // objective function
+                    pareto_weights          // pareto weights
+                  );
         #pragma omp critical
             {
                 int thread_id = omp_get_thread_num();
@@ -142,18 +146,20 @@ int main() {
         for (int p = P; p < pop; ++p) {
             // initialize simulation
             Voxel sim(default_sim.tfinal,    // tot sim time
-                      default_sim.dt,        // time step
-                      default_sim.node,      // num nodes
-                      default_sim.method,    // sim id
-                      param(p, 0),           // amb temp
-                      param(p, 3),           // uv intensity
-                      param(p, 4),           // uv exposure time
-                      default_sim.method,    // time stepping scheme
-                      save_voxel,            // save voxel values
-                      file_path,
-                      mthread);
+                    default_sim.dt,        // time step
+                    default_sim.node,      // num nodes
+                    default_sim.time_stepping,    // sim id
+                    param(p, 0),           // amb temp
+                    param(p, 3),           // uv intensity
+                    param(p, 4),           // uv exposure time
+                    file_path,
+                    mthread);
             sim.computeParticles(param(p, 1), param(p, 2));
-            sim.simulate();
+            sim.simulate(default_sim.method,    // time stepping scheme
+                        save_voxel,             // save voxel values
+                        obj_fn,                 // objective function
+                        pareto_weights          // pareto weights
+                    );
 
             #pragma omp critical
             {

@@ -18,9 +18,7 @@ class Voxel {
     double _dt;                  // |    s    |  time step discretization
     int    _nodes;
     float  _uvt;                 // |    s    |  uv exposure time
-    int    _method;              // |   ---   |  numerical method
-    int    _save_voxel;          // |   ---   |  save voxel data
-
+    
     double _timer;               // |    s    |  timer for simulation
     float _coord_map_const;
 
@@ -129,7 +127,13 @@ class Voxel {
     std::vector<double> _total_time_steps;         // time discretization
     std::vector<double> _z_space;                  // spatial discretization
 
-
+    // track average quantities
+    std::vector<double> _c_PI_avg;
+    std::vector<double> _c_PIdot_avg;
+    std::vector<double> _c_Mdot_avg;
+    std::vector<double> _c_M_avg;
+    std::vector<double> _theta_avg;
+    
     // data outputs
     std::ofstream _print_sim_config; 
     std::ofstream _print_density;
@@ -137,7 +141,14 @@ class Voxel {
     std::ofstream _print_avg_concentrations;
 
     // optimization objective
-    double    _obj;                                // |   ---   |  objective function
+    double    _obj;                                // |   ---   |  total obj function
+    double    _obj_PI;                             // |   ---   |  PI obj function
+    double    _obj_PIdot;                          // |   ---   |  PIdot obj function
+    double    _obj_Mdot;                           // |   ---   |  Mdot obj function
+    double    _obj_M;                              // |   ---   |  M obj function
+    double    _obj_default;                        // |   ---   |  default total obj function
+
+    // process parameters
     double    _vp;                                 // |   ---   |  volume fraction of particles
     double    _rp;                                 // |    m    |  radius of particles
     
@@ -156,8 +167,6 @@ class Voxel {
           double temp,
           float uvi,
           float uvt,
-          int    method,
-          int    save_voxel,
           std::string file_path,
           bool multi_thread);
 
@@ -255,10 +264,18 @@ class Voxel {
                             int (&coords)[3]);
 
 
-    void simulate();
+    void simulate(int method, int save_voxel, int obj_fn, double w[4]);
         // Simulate - runs simulation of UV curing kinetics
 
-    const double& getObjective();
+    double getObjPI();
+
+    double getObjPIDot();
+
+    double getObjMDot();
+
+    double getObjM();
+
+    double getObjective();
 
 };
 
