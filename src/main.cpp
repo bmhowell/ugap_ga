@@ -31,11 +31,11 @@ int main() {
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
     int   save_voxel = 0;
-    // std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
-    //                         + std::to_string(default_sim.time_stepping);
+    std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
+                            + std::to_string(default_sim.time_stepping);
     
-    std::string file_path = "/home/brian/Documents/brian/ugap_ga/output_"
-	                    + std::to_string(default_sim.time_stepping); 
+    // std::string file_path = "/home/brian/Documents/brian/ugap_ga/output_"
+	//                     + std::to_string(default_sim.time_stepping); 
     
     // GA parameters
     int pop = omp_get_num_procs();                                  // population size
@@ -44,8 +44,8 @@ int main() {
     int G   = 10;                                                   // number of generations
     double lam_1, lam_2;                                            // genetic alg paramters
 
-    // || temp | rm | vp | uvi | uvt | obj || ∈ ℝ (pop x param + obj)
-    Eigen::MatrixXd param(pop, 6);        
+    // || temp | rm | vp | uvi | uvt | obj_pi | obj_pidot | obj_mdot | obj_m | obj || ∈ ℝ (pop x param + obj)
+    Eigen::MatrixXd param(pop, 10);        
 
     // initialize input variables
     std::random_device rd;                                          // Obtain a random seed from the hardware
@@ -66,6 +66,7 @@ int main() {
     std::vector<double> top_performer; 
     std::vector<double> avg_parent; 
     std::vector<double> avg_total;
+    std::vector<double> top_obj_pi, top_obj_pidot, top_obj_mdot, top_obj_m;
     std::vector<double> top_temp, top_rp, top_vp, top_uvi, top_uvt;
 
     // initialize top performers
@@ -91,9 +92,18 @@ int main() {
                 int thread_id = omp_get_thread_num();
                 // std::cout << "Thread " << thread_id << std::endl;
                 if (!std::isnan(sim.getObjective())) {
-                    param(p, 5) = sim.getObjective();
+                    param(p, 9) = sim.getObjective();
+                    param(p, 8) = sim.getObjM();
+                    param(p, 7) = sim.getObjMDot();
+                    param(p, 6) = sim.getObjPIDot();
+                    param(p, 5) = sim.getObjPI();
                 } else {
+                    param(p, 9) = 1000.;
+                    param(p, 8) = 1000.;
+                    param(p, 7) = 1000.;
+                    param(p, 6) = 1000.;
                     param(p, 5) = 1000.;
+
                 }
             }
     }
@@ -101,9 +111,15 @@ int main() {
     sort_data(param);
 
     // track top and average performers
-    top_performer.push_back(param(0, param.cols() - 1));
-    avg_parent.push_back(param.col(param.cols() - 1).head(P).mean());
-    avg_total.push_back(param.col(param.cols() - 1).mean());
+    top_performer.push_back(param(0, 9));
+    avg_parent.push_back(param.col(9).head(P).mean());
+    avg_total.push_back(param.col(9).mean());
+    top_obj_pi.push_back(param(0, 5));
+    top_obj_pidot.push_back(param(0, 6));
+    top_obj_mdot.push_back(param(0, 7));
+    top_obj_m.push_back(param(0, 8));
+
+    // track top decision variables
     top_temp.push_back(param(0, 0));
     top_rp.push_back(param(0, 1));
     top_vp.push_back(param(0, 2));
@@ -123,8 +139,18 @@ int main() {
         param.row(i + C + 1) = lam_2 * param.row(i) + (1-lam_2) * param.row(i+1);
         
         // reset obj
-        param(i+C,   param.cols()-1) = 1000.0;
-        param(i+C+1, param.cols()-1) = 1000.0;
+        param(i+C,   5) = 1000.0;
+        param(i+C,   6) = 1000.0;
+        param(i+C,   7) = 1000.0;
+        param(i+C,   8) = 1000.0;
+        param(i+C,   9) = 1000.0;
+
+        param(i+C+1, 5) = 1000.0;
+        param(i+C+1, 6) = 1000.0;
+        param(i+C+1, 7) = 1000.0;
+        param(i+C+1, 8) = 1000.0;
+        param(i+C+1, 9) = 1000.0;
+
     }
 
     // generate new pop for remaining rows
@@ -133,8 +159,13 @@ int main() {
         param(i, 1) = c.min_rp   + (c.max_rp   - c.min_rp)   * distribution(gen);
         param(i, 2) = c.min_vp   + (c.max_vp   - c.min_vp)   * distribution(gen);
         param(i, 3) = c.min_uvi  + (c.max_uvi  - c.min_uvi)  * distribution(gen);
-        param(i, 4) = c.min_uvt  + (c.max_uvt  - c.min_uvt)  * distribution(gen); 
+        param(i, 4) = c.min_uvt  + (c.max_uvt  - c.min_uvt)  * distribution(gen);
+
         param(i, 5) = 1000.0;
+        param(i, 6) = 1000.0;
+        param(i, 7) = 1000.0;
+        param(i, 8) = 1000.0;
+        param(i, 9) = 1000.0;
     }
 
     std::cout << "==== BEGIN GENERATIONS ====" << std::endl;
@@ -166,9 +197,18 @@ int main() {
                 int thread_id = omp_get_thread_num();
                 // std::cout << "Thread " << thread_id << std::endl;
                 if (!std::isnan(sim.getObjective())) {
-                    param(p, 5) = sim.getObjective();
+                    param(p, 9) = sim.getObjective();
+                    param(p, 8) = sim.getObjM();
+                    param(p, 7) = sim.getObjMDot();
+                    param(p, 6) = sim.getObjPIDot();
+                    param(p, 5) = sim.getObjPI();
                 } else {
+                    param(p, 9) = 1000.;
+                    param(p, 8) = 1000.;
+                    param(p, 7) = 1000.;
+                    param(p, 6) = 1000.;
                     param(p, 5) = 1000.;
+
                 }
             }
         }
@@ -176,9 +216,15 @@ int main() {
         sort_data(param);
 
         // track top and average performers
-        top_performer.push_back(param(0, param.cols() - 1));
-        avg_parent.push_back(param.col(param.cols() - 1).head(P).mean());
-        avg_total.push_back(param.col(param.cols() - 1).mean());
+        top_performer.push_back(param(0, 9));
+        avg_parent.push_back(param.col(9).head(P).mean());
+        avg_total.push_back(param.col(9).mean());
+        top_obj_pi.push_back(param(0, 5));
+        top_obj_pidot.push_back(param(0, 6));
+        top_obj_mdot.push_back(param(0, 7));
+        top_obj_m.push_back(param(0, 8));
+
+        // track top decision variables
         top_temp.push_back(param(0, 0));
         top_rp.push_back(param(0, 1));
         top_vp.push_back(param(0, 2));
@@ -246,13 +292,13 @@ int main() {
     // save param matrix to file
     std::ofstream param_file;
     param_file.open(file_path + "/final_param.txt");
-    param_file << "temp, rp, vp, uvi, uvt, obj" << std::endl;
+    param_file << "temp, rp, vp, uvi, uvt, avg_obj, avg_top_obj, top_obj, top_pi, top_pidot, top_mdot, top_m" << std::endl;
     param_file << param << std::endl;
     param_file.close();
 
     std::ofstream param_converge_file;
     param_converge_file.open(file_path + "/param_converge.txt");
-    param_converge_file << "temp, rp, vp, uvi, uvt, avg_obj, avg_top_obj, top_obj" << std::endl;
+    param_converge_file << "temp, rp, vp, uvi, uvt, avg_obj, avg_top_obj, top_obj, top_pi, top_pidot, top_mdot, top_m" << std::endl;
     for (int i = 0; i < top_temp.size(); ++i) {
         param_converge_file << top_temp[i]      << ", " 
                             << top_rp[i]        << ", " 
@@ -261,7 +307,12 @@ int main() {
                             << top_uvt[i]       << ", " 
                             << avg_total[i]     << ", " 
                             << avg_parent[i]    << ", " 
-                            << top_performer[i] << std::endl;
+                            << top_performer[i] << ", "
+                            << top_obj_pi[i]    << ", "
+                            << top_obj_pidot[i] << ", "
+                            << top_obj_mdot[i]  << ", "
+                            << top_obj_m[i]     << ", "
+                            << std::endl;
     }
     param_converge_file.close();
 
