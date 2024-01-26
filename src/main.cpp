@@ -139,17 +139,17 @@ int main() {
         param.row(i + C + 1) = lam_2 * param.row(i) + (1-lam_2) * param.row(i+1);
         
         // reset obj
-        param(i+C,   5) = 1000.0;
-        param(i+C,   6) = 1000.0;
-        param(i+C,   7) = 1000.0;
-        param(i+C,   8) = 1000.0;
-        param(i+C,   9) = 1000.0;
+        param(i+C,   5) = 1.0;
+        param(i+C,   6) = 1.0;
+        param(i+C,   7) = 1.0;
+        param(i+C,   8) = 1.0;
+        param(i+C,   9) = 1.0;
 
-        param(i+C+1, 5) = 1000.0;
-        param(i+C+1, 6) = 1000.0;
-        param(i+C+1, 7) = 1000.0;
-        param(i+C+1, 8) = 1000.0;
-        param(i+C+1, 9) = 1000.0;
+        param(i+C+1, 5) = 1.0;
+        param(i+C+1, 6) = 1.0;
+        param(i+C+1, 7) = 1.0;
+        param(i+C+1, 8) = 1.0;
+        param(i+C+1, 9) = 1.0;
 
     }
 
@@ -161,11 +161,11 @@ int main() {
         param(i, 3) = c.min_uvi  + (c.max_uvi  - c.min_uvi)  * distribution(gen);
         param(i, 4) = c.min_uvt  + (c.max_uvt  - c.min_uvt)  * distribution(gen);
 
-        param(i, 5) = 1000.0;
-        param(i, 6) = 1000.0;
-        param(i, 7) = 1000.0;
-        param(i, 8) = 1000.0;
-        param(i, 9) = 1000.0;
+        param(i, 5) = 1.0;
+        param(i, 6) = 1.0;
+        param(i, 7) = 1.0;
+        param(i, 8) = 1.0;
+        param(i, 9) = 1.0;
     }
 
     std::cout << "==== BEGIN GENERATIONS ====" << std::endl;
@@ -245,8 +245,8 @@ int main() {
                 param.row(i + C + 1) = lam_2 * param.row(i) + (1-lam_2) * param.row(i+1);
                 
                 // reset obj
-                param(i+C,   param.cols()-1) = 1000.0;
-                param(i+C+1, param.cols()-1) = 1000.0;
+                param(i+C,   param.cols()-1) = 1.0;
+                param(i+C+1, param.cols()-1) = 1.0;
             }
 
             // generate new pop for remaining rows
@@ -256,7 +256,7 @@ int main() {
                 param(i, 2) = c.min_vp   + (c.max_vp   - c.min_vp)   * distribution(gen);
                 param(i, 3) = c.min_uvi  + (c.max_uvi  - c.min_uvi)  * distribution(gen);
                 param(i, 4) = c.min_uvt  + (c.max_uvt  - c.min_uvt)  * distribution(gen); 
-                param(i, 5) = 1000.0;
+                param(i, 5) = 1.0;
             }
 
         }
@@ -292,7 +292,7 @@ int main() {
     // save param matrix to file
     std::ofstream param_file;
     param_file.open(file_path + "/final_param.txt");
-    param_file << "temp, rp, vp, uvi, uvt, avg_obj, avg_top_obj, top_obj, top_pi, top_pidot, top_mdot, top_m" << std::endl;
+    param_file << "temp, rp, vp, uvi, uvt, obj_pi, obj_pidot, obj_mdot, obj_m, obj" << std::endl;
     param_file << param << std::endl;
     param_file.close();
 
