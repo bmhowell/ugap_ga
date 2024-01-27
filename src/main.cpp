@@ -31,11 +31,11 @@ int main() {
     default_sim.update_time_stepping_values();
     const bool mthread = true; 
     int   save_voxel = 0;
-    std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
-                            + std::to_string(default_sim.time_stepping);
+    // std::string file_path = "/Users/brianhowell/Desktop/Berkeley/MSOL/ugap_ga/output_" 
+       //                      + std::to_string(default_sim.time_stepping);
     
-    // std::string file_path = "/home/brian/Documents/brian/ugap_ga/output_"
-	//                     + std::to_string(default_sim.time_stepping); 
+    std::string file_path = "/home/brian/Documents/brian/ugap_ga/output_"
+	                     + std::to_string(default_sim.time_stepping); 
     
     // GA parameters
     int pop = omp_get_num_procs();                                  // population size
@@ -98,11 +98,11 @@ int main() {
                     param(p, 6) = sim.getObjPIDot();
                     param(p, 5) = sim.getObjPI();
                 } else {
-                    param(p, 9) = 1000.;
-                    param(p, 8) = 1000.;
-                    param(p, 7) = 1000.;
-                    param(p, 6) = 1000.;
-                    param(p, 5) = 1000.;
+                    param(p, 9) = 1.;
+                    param(p, 8) = 1.;
+                    param(p, 7) = 1.;
+                    param(p, 6) = 1.;
+                    param(p, 5) = 1.;
 
                 }
             }
